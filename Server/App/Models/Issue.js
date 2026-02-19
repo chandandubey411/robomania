@@ -20,6 +20,16 @@ const issueSchema = new mongoose.Schema(
       default: "Pending",
     },
 
+    priority: {
+      type: String,
+      enum: ["High", "Medium", "Low"],
+      default: "Medium"
+    },
+    proofImage: {
+      type: String,
+      default: null
+    },
+
     // 🧑‍🔧 NEW FIELD (THIS FIXES WORKER DASHBOARD)
     assignedTo: {
       type: String,
@@ -33,6 +43,22 @@ const issueSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    // ❤️ Social Interactions
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    comments: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        // We'll store name temporarily to avoid complex populations if needed, 
+        // but ideally population is better. Let's start simple.
+        userName: String,
+        text: String,
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
+
+    shares: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

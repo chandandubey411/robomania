@@ -69,9 +69,8 @@ const Navbar = () => {
 
         {/* Menu Links */}
         <div
-          className={`flex-col md:flex md:flex-row md:space-x-6 absolute md:static bg-transparent w-max md:w-auto top-16 md:top-auto right-4 md:right-0 transition-all duration-300 ease-in-out ${
-            isOpen ? "flex" : "hidden"
-          }`}
+          className={`flex-col md:flex md:flex-row md:space-x-6 absolute md:static bg-transparent w-max md:w-auto top-16 md:top-auto right-4 md:right-0 transition-all duration-300 ease-in-out ${isOpen ? "flex" : "hidden"
+            }`}
         >
           {role === "admin" ? (
             <Link
@@ -97,6 +96,13 @@ const Navbar = () => {
               >
                 Report Issue
               </Link>
+              <Link
+                to="/explore"
+                onClick={() => setIsOpen(false)}
+                className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+              >
+                Explore Issues
+              </Link>
 
               {islogged ? (
                 <Link
@@ -114,6 +120,13 @@ const Navbar = () => {
                     className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
                   >
                     Login
+                  </Link>
+                  <Link
+                    to="/explore"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+                  >
+                    Explore Issues
                   </Link>
                   <Link
                     to="/register"

@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ReportIssue from "./pages/ReportIssue";
+import ExploreIssues from "./pages/ExploreIssues";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/Admindashboard";
 import WorkerDashboard from "./pages/WorkerDashboard";
@@ -76,6 +77,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/report" element={<ReportIssue />} />
+            <Route path="/explore" element={<ExploreIssues />} />
 
             <Route
               path="/user/dashboard"
@@ -87,7 +89,7 @@ function App() {
               element={<PrivateRouteAdmin element={<AdminDashboard />} />}
             />
 
-             <Route path="/worker/dashboard" element={<WorkerDashboard />} />
+            <Route path="/worker/dashboard" element={<WorkerDashboard />} />
 
 
 
