@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Eye } from "lucide-react";
 
 import CityHeatmap from "../components/CityHeatmap";
 import CreateWorker from "../components/CreateWorker";
@@ -19,6 +20,19 @@ const CATEGORIES = [
 const SORT_OPTIONS = [
   { label: "Latest first", value: "latest" },
   { label: "Oldest first", value: "oldest" },
+];
+
+const STAFF_OPTIONS = [
+  "Public Works Department (PWD)",
+  "Municipal Sanitation Team",
+  "Water Supply Department",
+  "Road Maintenance Division",
+  "Streetlight Maintenance Unit",
+  "Drainage & Sewage Department",
+  "Waste Management Authority",
+  "Parks & Horticulture Department",
+  "Traffic & Road Safety Cell",
+  "Building & Construction Division",
 ];
 
 const StatCard = ({ label, value, color = "indigo" }) => (
@@ -47,19 +61,6 @@ const FilterSelect = ({ options, value, onChange, placeholder }) => (
     ))}
   </select>
 );
-
-const STAFF_OPTIONS = [
-  "Public Works Department (PWD)",
-  "Municipal Sanitation Team",
-  "Water Supply Department",
-  "Road Maintenance Division",
-  "Streetlight Maintenance Unit",
-  "Drainage & Sewage Department",
-  "Waste Management Authority",
-  "Parks & Horticulture Department",
-  "Traffic & Road Safety Cell",
-  "Building & Construction Division",
-];
 
 const CityIssueMap = ({ issues }) => {
   return (
@@ -112,6 +113,7 @@ const AdminDashboard = () => {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
+  const [selectedIssue, setSelectedIssue] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [status, setStatus] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
@@ -144,7 +146,7 @@ const AdminDashboard = () => {
         });
 
         const data = await res.json();
-        console.log("🧠 AI Trends:", data); // 🔍 Debug proof
+        console.log("🧠 AI Trends:", data);
         setAiTrends(data);
       } catch (err) {
         console.error("AI Trend fetch failed:", err);
@@ -276,8 +278,8 @@ const AdminDashboard = () => {
 
         {/* Modal */}
         {showCreateWorker && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white w-full max-w-lg rounded-xl shadow-lg relative">
+          <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl relative animate-fadeIn">
               {/* Close button */}
               <button
                 onClick={() => setShowCreateWorker(false)}
@@ -299,6 +301,90 @@ const AdminDashboard = () => {
           Logout
         </button>
       </div>
+
+      {/* Issue Details Modal */}
+      {selectedIssue && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl relative overflow-y-auto max-h-[90vh] animate-fadeIn z-[100000]">
+            <button
+              onClick={() => setSelectedIssue(null)}
+              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition"
+            >
+              ✕
+            </button>
+
+            <div className="p-6 sm:p-8">
+              <h2 className="text-2xl font-bold mb-4 text-slate-800 border-b pb-2">{selectedIssue.title}</h2>
+
+              {selectedIssue.imageURL && (
+                <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Before</p>
+                    <div className="rounded-xl overflow-hidden shadow-md border">
+                      <img
+                        src={selectedIssue.imageURL}
+                        alt="Issue Evidence"
+                        className="w-full h-64 object-cover"
+                      />
+                    </div>
+                  </div>
+                  {selectedIssue.proofImage && (
+                    <div>
+                      <p className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2">After (Resolution)</p>
+                      <div className="rounded-xl overflow-hidden shadow-md border border-green-200">
+                        <img
+                          src={selectedIssue.proofImage}
+                          alt="Resolution Proof"
+                          className="w-full h-64 object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-slate-50 p-4 rounded-xl">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</p>
+                  <p className="text-lg font-medium text-slate-800">{selectedIssue.category}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-xl">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</p>
+                  <p className={`text-lg font-bold ${selectedIssue.priority === 'High' ? 'text-red-600' : 'text-slate-700'}`}>
+                    {selectedIssue.priority || "Medium"}
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-xl">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-1 ${selectedIssue.status === "Resolved" ? "bg-green-100 text-green-700" :
+                    selectedIssue.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
+                      "bg-red-100 text-red-700"
+                    }`}>
+                    {selectedIssue.status}
+                  </span>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-xl">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Location</p>
+                  <p className="text-sm font-medium text-slate-700 mt-1">{selectedIssue.location?.address || "No address provided"}</p>
+                  {selectedIssue.location?.city && <p className="text-xs text-slate-500">{selectedIssue.location.city}, {selectedIssue.location.state}</p>}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-5 rounded-xl">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description</p>
+                <p className="text-slate-700 leading-relaxed">{selectedIssue.description}</p>
+              </div>
+
+              {selectedIssue.resolutionNotes && (
+                <div className="mt-6 bg-green-50 p-5 rounded-xl border border-green-100">
+                  <p className="text-xs font-bold text-green-700 uppercase tracking-wider mb-2">Resolution Notes</p>
+                  <p className="text-slate-700">{selectedIssue.resolutionNotes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Critical */}
       <div className="mb-8 sm:mb-10 p-5 sm:p-7 bg-gradient-to-r from-red-100 to-pink-100 border border-red-200 rounded-2xl sm:rounded-3xl shadow-lg">
@@ -484,7 +570,7 @@ const AdminDashboard = () => {
                   )}
                 </td>
 
-                <td className="p-4 space-x-2">
+                <td className="p-4 space-x-2 flex items-center">
                   {editing === issue._id ? (
                     <>
                       <button
@@ -502,6 +588,13 @@ const AdminDashboard = () => {
                     </>
                   ) : (
                     <>
+                      <button
+                        onClick={() => setSelectedIssue(issue)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg shadow transition"
+                        title="View Details"
+                      >
+                        <Eye size={18} />
+                      </button>
                       <button
                         onClick={() => startEdit(issue)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow"
@@ -522,7 +615,7 @@ const AdminDashboard = () => {
           </tbody>
         </table>
         {/* 📱 Mobile Issue Cards */}
-        {/* 📱 Mobile Issue Cards */}
+
         <div className="md:hidden space-y-4">
           {issues.map((issue) => (
             <div
@@ -545,13 +638,12 @@ const AdminDashboard = () => {
                   </select>
                 ) : (
                   <span
-                    className={`text-sm font-semibold ${
-                      issue.status === "Resolved"
-                        ? "text-green-600"
-                        : issue.status === "In Progress"
-                          ? "text-yellow-600"
-                          : "text-red-600"
-                    }`}
+                    className={`text-sm font-semibold ${issue.status === "Resolved"
+                      ? "text-green-600"
+                      : issue.status === "In Progress"
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                      }`}
                   >
                     {issue.status}
                   </span>
@@ -596,7 +688,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Buttons */}
-              <div className="flex gap-3 mt-4">
+              <div className="flex gap-2 mt-4">
                 {editing === issue._id ? (
                   <>
                     <button
@@ -614,6 +706,12 @@ const AdminDashboard = () => {
                   </>
                 ) : (
                   <>
+                    <button
+                      onClick={() => setSelectedIssue(issue)}
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow flex items-center justify-center"
+                    >
+                      <Eye size={20} />
+                    </button>
                     <button
                       onClick={() => startEdit(issue)}
                       className="flex-1 bg-blue-600 text-white py-2 rounded-lg shadow"

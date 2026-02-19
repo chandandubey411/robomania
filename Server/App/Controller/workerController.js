@@ -19,9 +19,16 @@ exports.getWorkerStats = async (req, res) => {
 
 // 🔄 Worker Status Update
 exports.updateIssueStatus = async (req, res) => {
+  const { status, proofImage } = req.body;
+
+  // 🛡️ Proof of Work Check
+  if (status === "Resolved" && !proofImage) {
+    return res.status(400).json({ error: "Proof image is required to resolve issue." });
+  }
+
   const issue = await Issue.findByIdAndUpdate(
     req.params.id,
-    { status: req.body.status },
+    { status, proofImage }, // Save proof image if provided
     { new: true }
   );
 

@@ -91,8 +91,8 @@ const UserDashboard = () => {
                     issue.status === "Resolved"
                       ? "text-green-600 font-semibold"
                       : issue.status === "In Progress"
-                      ? "text-yellow-600 font-semibold"
-                      : "text-red-600 font-semibold"
+                        ? "text-yellow-600 font-semibold"
+                        : "text-red-600 font-semibold"
                   }
                 >
                   {issue.status}
@@ -100,18 +100,33 @@ const UserDashboard = () => {
               </div>
 
               {issue.imageURL && (
-                <img
-                  src={
-                    issue.imageURL.startsWith("http")
-                      ? issue.imageURL
-                      : `http://localhost:8080/${issue.imageURL.replace(
-                          /\\/g,
-                          "/"
-                        )}`
-                  }
-                  alt={issue.title}
-                  className="h-40 w-full object-cover mt-3 rounded-lg border"
-                />
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase mb-1">Reported Issue</p>
+                    <img
+                      src={
+                        issue.imageURL.startsWith("http")
+                          ? issue.imageURL
+                          : `http://localhost:8080/${issue.imageURL.replace(
+                            /\\/g,
+                            "/"
+                          )}`
+                      }
+                      alt={issue.title}
+                      className="h-40 w-full object-cover rounded-lg border"
+                    />
+                  </div>
+                  {issue.proofImage && (
+                    <div>
+                      <p className="text-xs font-bold text-green-600 uppercase mb-1">Resolution Proof</p>
+                      <img
+                        src={issue.proofImage}
+                        alt="Resolution Proof"
+                        className="h-40 w-full object-cover rounded-lg border border-green-200"
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               {issue.resolutionNotes && (

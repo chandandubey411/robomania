@@ -48,13 +48,15 @@ const Login = () => {
           localStorage.setItem("loggedInUser", user.name);
           localStorage.setItem("userEmail", user.email);
           localStorage.setItem("userRole", user.role);
+          localStorage.setItem("userDepartment", user.department || "");
+          localStorage.setItem("userId", user._id);
 
           // 🚦 Smart redirect by role
-            setTimeout(() => {
-              if (user.role === "admin") navigate("/admin/dashboard");
-              else if (user.role === "worker") navigate("/worker/dashboard");
-              else navigate("/report");
-            }, 1000);
+          setTimeout(() => {
+            if (user.role === "admin") navigate("/admin/dashboard");
+            else if (user.role === "worker") navigate("/worker/dashboard");
+            else navigate("/report");
+          }, 1000);
 
         }
 
@@ -80,11 +82,10 @@ const Login = () => {
             <input
               type="email"
               name="email"
-              className={`w-full p-3 border rounded-lg ${
-                errors.email
-                  ? "border-red-500 focus:ring-1 focus:ring-red-400"
-                  : "border-gray-300 focus:ring-1 focus:ring-blue-400"
-              }`}
+              className={`w-full p-3 border rounded-lg ${errors.email
+                ? "border-red-500 focus:ring-1 focus:ring-red-400"
+                : "border-gray-300 focus:ring-1 focus:ring-blue-400"
+                }`}
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
@@ -101,11 +102,10 @@ const Login = () => {
             <input
               type="password"
               name="password"
-              className={`w-full p-3 border rounded-lg ${
-                errors.password
-                  ? "border-red-500 focus:ring-1 focus:ring-red-400"
-                  : "border-gray-300 focus:ring-1 focus:ring-blue-400"
-              }`}
+              className={`w-full p-3 border rounded-lg ${errors.password
+                ? "border-red-500 focus:ring-1 focus:ring-red-400"
+                : "border-gray-300 focus:ring-1 focus:ring-blue-400"
+                }`}
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter your password"

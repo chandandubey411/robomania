@@ -56,8 +56,8 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const payload = { 
-      userId: user._id, 
+    const payload = {
+      userId: user._id,
       role: user.role,
       department: user.department || null
     };
@@ -70,14 +70,15 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department || null
+        department: user.department || null,
+        _id: user._id
       },
       message: "Sign in successfully"
     });
 
   } catch (err) {
-  console.error("REGISTER ERROR:", err);
-  return res.status(500).json({ error: err.message });
-}
+    console.error("REGISTER ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
 
 };
