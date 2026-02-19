@@ -16,6 +16,8 @@ import ExploreIssues from "./pages/ExploreIssues";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/Admindashboard";
 import WorkerDashboard from "./pages/WorkerDashboard";
+import Community from "./pages/Community";
+import CommunityChat from "./pages/CommunityChat";
 import RefreshHandler from "./RefreshHandler";
 import Footer from "./components/Footer";
 
@@ -90,6 +92,12 @@ function App() {
             />
 
             <Route path="/worker/dashboard" element={<WorkerDashboard />} />
+
+            <Route path="/community" element={<Community />} />
+            <Route
+              path="/community/:id"
+              element={<PrivateRoute element={<CommunityChat />} />}
+            />
 
 
 

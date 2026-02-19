@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "aos": "^2.3.4",
+    "axios": "^1.13.5",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.562.0",
@@ -20,6 +21,7 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.11.0",
     "react-toastify": "^11.0.5",
+    "socket.io-client": "^4.8.3",
     "swiper": "^12.1.0"
   },
   "devDependencies": {

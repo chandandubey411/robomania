@@ -46,6 +46,7 @@ const Login = () => {
           // 🧠 Save session
           localStorage.setItem("token", token);
           localStorage.setItem("loggedInUser", user.name);
+          localStorage.setItem("userName", user.name);
           localStorage.setItem("userEmail", user.email);
           localStorage.setItem("userRole", user.role);
           localStorage.setItem("userDepartment", user.department || "");

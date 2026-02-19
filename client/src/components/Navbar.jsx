@@ -5,14 +5,28 @@ import logo from "../images/logo.png";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
-  const islogged = localStorage.getItem("token");
-  const role = localStorage.getItem("userRole");
+  const [islogged, setIslogged] = useState(!!localStorage.getItem("token"));
+  const [role, setRole] = useState(localStorage.getItem("userRole") || "");
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    // Re-check auth whenever localStorage changes (login/logout/register)
+    const handleStorage = () => {
+      setIslogged(!!localStorage.getItem("token"));
+      setRole(localStorage.getItem("userRole") || "");
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // Also poll every second to catch same-tab localStorage changes
+    const interval = setInterval(handleStorage, 1000);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -102,6 +116,14 @@ const Navbar = () => {
                 className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
               >
                 Explore Issues
+              </Link>
+
+              <Link
+                to="/community"
+                onClick={() => setIsOpen(false)}
+                className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+              >
+                Community
               </Link>
 
               {islogged ? (
