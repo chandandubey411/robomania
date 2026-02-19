@@ -264,12 +264,54 @@ function ReportMap() {
         )}
 
         {routeMode && !routeLoading && (
-          <div className={`mt-3 text-sm font-bold border rounded-xl px-4 py-2 ${severityInfo().color}`}>
-            {severityInfo().text}
-            <span className="font-normal ml-2 text-xs opacity-70">
-              (within 500m of route)
-            </span>
-          </div>
+          <>
+            {/* Severity banner */}
+            <div className={`mt-3 text-sm font-bold border rounded-xl px-4 py-2 ${severityInfo().color}`}>
+              {severityInfo().text}
+              <span className="font-normal ml-2 text-xs opacity-70">(within 500m of route)</span>
+            </div>
+
+            {/* Issue list box — shown only when there are flagged issues */}
+            {flaggedIssues.length > 0 && (
+              <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                    🚨 Issues on this route
+                  </span>
+                  <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                    {flaggedIssues.length} found
+                  </span>
+                </div>
+                <div className="max-h-52 overflow-y-auto divide-y divide-gray-100">
+                  {flaggedIssues.map((issue) => (
+                    <div key={issue._id} className="flex items-start gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+                      {/* Status dot */}
+                      <span
+                        className="mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: STATUS_COLORS[issue.status] || "#ef4444" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{issue.title}</p>
+                        <p className="text-xs text-gray-400 truncate">{issue.description}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: (STATUS_COLORS[issue.status] || "#ef4444") + "20",
+                            color: STATUS_COLORS[issue.status] || "#ef4444",
+                          }}
+                        >
+                          {issue.status}
+                        </span>
+                        <span className="text-xs text-gray-400">{issue.category}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
