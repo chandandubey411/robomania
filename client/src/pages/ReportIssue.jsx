@@ -5,9 +5,10 @@ import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import { handleSuccess } from "../Utils";
 import { useNavigate } from "react-router-dom";
+import { useOfflineQueue } from "../hooks/useOfflineQueue";
 
 
 
@@ -117,10 +118,16 @@ export default function ReportIssue() {
   const [submitting, setSubmitting] = useState(false);
   const [imageAnalyzed, setImageAnalyzed] = useState(false);
 
-
   const navigate = useNavigate();
-  // const token = localStorage.getItem("token");
   const token = localStorage.getItem("token") || "";
+
+  // Offline queue hook
+  const { isOnline, pendingCount, saveToQueue, syncNow } = useOfflineQueue();
+
+  // Try to sync whenever the page mounts and we have connectivity
+  useEffect(() => {
+    if (isOnline && token) syncNow(token);
+  }, []);
 
 
   /* 📍 Live GPS Location */
@@ -285,45 +292,49 @@ export default function ReportIssue() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("TOKEN BEING SENT:", token);
-
     if (!token || token === "null" || token === "undefined") {
       alert("Session expired. Please login again.");
       return;
     }
 
-    if (!form.title.trim()) return handleSuccess("Please enter issue title");
-    if (!form.description.trim()) return handleSuccess("Please enter issue description");
-    if (!form.image) return handleSuccess("Please upload issue image");
+    if (!form.title.trim()) return toast.warn("Please enter issue title");
+    if (!form.description.trim()) return toast.warn("Please enter issue description");
+    if (!form.image) return toast.warn("Please upload issue image");
 
-    setSubmitting(true);
-
-    try {
-      const res = await fetch(
-        "http://localhost:8080/api/issues",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(form),
-        }
+    // ── OFFLINE: save locally, sync later ────────────────────────
+    if (!isOnline) {
+      saveToQueue(form, token);
+      toast.info(
+        `📦 You're offline! Report saved locally. It will auto-upload when you're back online. (${pendingCount + 1} pending)`,
+        { autoClose: 5000 }
       );
+      return;
+    }
+
+    // ── ONLINE: submit immediately ────────────────────────────────
+    setSubmitting(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/issues", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Submission failed");
 
-      if (!res.ok) {
-        console.error("SUBMIT ERROR:", data);
-        throw new Error(data.message || "Submission failed");
-      }
+      // Also sync any previously queued reports
+      await syncNow(token);
 
-      handleSuccess("Issue reported successfully!");
-      setTimeout(() => navigate("/user/dashboard"), 1000);
-
+      toast.success("✅ Issue reported successfully!");
+      setTimeout(() => navigate("/user/dashboard"), 1200);
     } catch (err) {
       console.error(err);
-      handleSuccess("Something went wrong");
+      toast.error("Something went wrong. Saving locally...");
+      saveToQueue(form, token);
     } finally {
       setSubmitting(false);
     }
@@ -334,6 +345,40 @@ export default function ReportIssue() {
   return (
     <div className="min-h-screen bg-gray-100 py-10">
       <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+
+        {/* ── Offline / Pending banners ─────────────────────────────── */}
+        {!isOnline && (
+          <div className="mb-5 flex items-center gap-3 bg-orange-50 border border-orange-300 rounded-xl px-4 py-3">
+            <span className="text-2xl">📡</span>
+            <div>
+              <p className="font-bold text-orange-700 text-sm">You're offline</p>
+              <p className="text-orange-600 text-xs">
+                Your report will be saved locally and uploaded automatically when you're back online.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isOnline && pendingCount > 0 && (
+          <div className="mb-5 flex items-center justify-between gap-3 bg-blue-50 border border-blue-300 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔄</span>
+              <div>
+                <p className="font-bold text-blue-700 text-sm">
+                  {pendingCount} pending report{pendingCount > 1 ? "s" : ""} found
+                </p>
+                <p className="text-blue-600 text-xs">Syncing your saved reports now…</p>
+              </div>
+            </div>
+            <button
+              onClick={() => syncNow(token)}
+              className="text-xs font-bold bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-all flex-shrink-0"
+            >
+              Sync Now
+            </button>
+          </div>
+        )}
+
         <h1 className="text-3xl font-bold text-center text-blue-700">
           🚨 Report Civic Issue
         </h1>
@@ -428,14 +473,23 @@ export default function ReportIssue() {
           </div>
 
           <button
+            type="submit"
             disabled={
               submitting ||
               !form.title.trim() ||
               !form.description.trim()
             }
-            className="w-full bg-blue-600 disabled:bg-gray-400 hover:bg-blue-700 transition text-white py-3 rounded-full font-semibold text-lg"
+            className={`w-full transition text-white py-3 rounded-full font-semibold text-lg disabled:bg-gray-400 ${
+              !isOnline
+                ? "bg-orange-500 hover:bg-orange-600"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            {submitting ? "Submitting..." : "Submit Issue"}
+            {submitting
+              ? "Submitting..."
+              : !isOnline
+              ? "📦 Save Offline"
+              : "Submit Issue"}
           </button>
         </form>
       </div>

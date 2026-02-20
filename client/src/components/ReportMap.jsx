@@ -1,17 +1,16 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
   Polyline,
-  CircleMarker,
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// ── Haversine distance (km) between two [lat,lng] points ─────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function haversine([lat1, lon1], [lat2, lon2]) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -24,7 +23,6 @@ function haversine([lat1, lon1], [lat2, lon2]) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Min distance from point to polyline
 function distToPolyline(point, polyline) {
   let minDist = Infinity;
   for (let i = 0; i < polyline.length - 1; i++) {
@@ -59,117 +57,81 @@ async function getRoute(from, to) {
   return data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
 }
 
+// ── Icons ──────────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
   Resolved: "#22c55e",
   "In Progress": "#f59e0b",
   Pending: "#ef4444",
 };
 
-const problemIcon = L.divIcon({
-  className: "",
-  html: `<div style="width:30px;height:30px;background:#ef4444;border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-size:14px;animation:pulse 1.5s infinite;">⚠️</div>`,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-  popupAnchor: [0, -15],
-});
+const makeDiv = (gradient, emoji, size = 34) =>
+  `<div style="width:${size}px;height:${size}px;background:${gradient};border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.18);font-size:${Math.round(size * 0.45)}px">${emoji}</div>`;
 
-const startIcon = L.divIcon({
-  className: "",
-  html: `<div style="width:36px;height:36px;background:#6366f1;border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-size:18px;">🚀</div>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -18],
-});
-
-const endIcon = L.divIcon({
-  className: "",
-  html: `<div style="width:36px;height:36px;background:#10b981;border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-size:18px;">🏁</div>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -18],
-});
-
+const problemIcon = L.divIcon({ className: "", html: makeDiv("#ef4444", "⚠️", 32), iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16] });
+const startIcon   = L.divIcon({ className: "", html: makeDiv("linear-gradient(135deg,#3b82f6,#22c55e)", "🚀", 38), iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -19] });
+const endIcon     = L.divIcon({ className: "", html: makeDiv("linear-gradient(135deg,#22c55e,#3b82f6)", "🏁", 38), iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -19] });
 const defaultIcon = new L.Icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-  iconSize: [28, 28],
-  iconAnchor: [14, 28],
-  popupAnchor: [0, -28],
+  iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -30],
 });
 
 function FlyTo({ bounds }) {
   const map = useMap();
-  useEffect(() => {
-    if (bounds) map.fitBounds(bounds, { padding: [50, 50] });
-  }, [bounds, map]);
+  useEffect(() => { if (bounds) map.fitBounds(bounds, { padding: [60, 60] }); }, [bounds, map]);
   return null;
 }
 
 const THRESHOLD_KM = 0.5;
 
-function ReportMap() {
-  const [issues, setIssues] = useState([]);
-  const [loading, setLoading] = useState(true);
+function getSeverity(n) {
+  if (n === 0) return { label: "Clear Route", sub: "No issues found along this route", icon: "✅", cls: "bg-green-50 border-green-200 text-green-800", badge: "bg-green-100 text-green-700" };
+  if (n <= 2)  return { label: `${n} Minor Issue${n > 1 ? "s" : ""}`, sub: "Proceed with caution", icon: "⚠️", cls: "bg-yellow-50 border-yellow-200 text-yellow-800", badge: "bg-yellow-100 text-yellow-700" };
+  return         { label: `${n} Issues Found`, sub: "Drive carefully!", icon: "🚨", cls: "bg-red-50 border-red-200 text-red-800", badge: "bg-red-100 text-red-700" };
+}
 
-  // Route state
-  const [source, setSource] = useState("");
-  const [destination, setDestination] = useState("");
-  const [routeCoords, setRouteCoords] = useState(null);
-  const [fromCoord, setFromCoord] = useState(null);
-  const [toCoord, setToCoord] = useState(null);
+// ── Component ──────────────────────────────────────────────────────────────────
+export default function ReportMap() {
+  const [issues, setIssues]               = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [source, setSource]               = useState("");
+  const [destination, setDestination]     = useState("");
+  const [routeCoords, setRouteCoords]     = useState(null);
+  const [fromCoord, setFromCoord]         = useState(null);
+  const [toCoord, setToCoord]             = useState(null);
   const [flaggedIssues, setFlaggedIssues] = useState([]);
-  const [routeLoading, setRouteLoading] = useState(false);
-  const [routeError, setRouteError] = useState("");
-  const [routeBounds, setRouteBounds] = useState(null);
-  const [routeMode, setRouteMode] = useState(false);
+  const [routeLoading, setRouteLoading]   = useState(false);
+  const [routeError, setRouteError]       = useState("");
+  const [routeBounds, setRouteBounds]     = useState(null);
+  const [routeMode, setRouteMode]         = useState(false);
 
-  const user = localStorage.getItem("loggedInUser");
+  const user = localStorage.getItem("loggedInUser") || "User";
 
   useEffect(() => {
     fetch("http://localhost:8080/api/issues")
-      .then((res) => res.json())
-      .then((data) => {
-        setIssues(data);
-        setLoading(false);
-      })
+      .then((r) => r.json())
+      .then((d) => { setIssues(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
   const handleRouteSearch = async (e) => {
     e.preventDefault();
     if (!source.trim() || !destination.trim()) return;
-    setRouteError("");
-    setRouteLoading(true);
-    setRouteCoords(null);
-    setFlaggedIssues([]);
-    setRouteMode(false);
-
+    setRouteError(""); setRouteLoading(true);
+    setRouteCoords(null); setFlaggedIssues([]); setRouteMode(false);
     try {
       const [from, to] = await Promise.all([geocode(source), geocode(destination)]);
       const coords = await getRoute(from, to);
+      setFromCoord(from); setToCoord(to); setRouteCoords(coords); setRouteMode(true);
 
-      setFromCoord(from);
-      setToCoord(to);
-      setRouteCoords(coords);
-      setRouteMode(true);
-
-      const validIssues = issues.filter(
-        (i) => i.location?.latitude && i.location?.longitude
-      );
-      const flagged = validIssues.filter((issue) => {
-        const pt = [
-          Number(issue.location.latitude),
-          Number(issue.location.longitude),
-        ];
-        return distToPolyline(pt, coords) <= THRESHOLD_KM;
-      });
+      const flagged = issues
+        .filter((i) => i.location?.latitude && i.location?.longitude)
+        .filter((i) =>
+          distToPolyline([Number(i.location.latitude), Number(i.location.longitude)], coords) <= THRESHOLD_KM
+        );
       setFlaggedIssues(flagged);
 
-      const lats = coords.map((c) => c[0]);
-      const lngs = coords.map((c) => c[1]);
-      setRouteBounds([
-        [Math.min(...lats), Math.min(...lngs)],
-        [Math.max(...lats), Math.max(...lngs)],
-      ]);
+      const lats = coords.map((c) => c[0]), lngs = coords.map((c) => c[1]);
+      setRouteBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]]);
     } catch (err) {
       setRouteError(err.message || "Failed to find route");
     } finally {
@@ -178,323 +140,255 @@ function ReportMap() {
   };
 
   const clearRoute = () => {
-    setRouteCoords(null);
-    setFromCoord(null);
-    setToCoord(null);
-    setFlaggedIssues([]);
-    setRouteBounds(null);
-    setRouteMode(false);
-    setRouteError("");
-    setSource("");
-    setDestination("");
+    setRouteCoords(null); setFromCoord(null); setToCoord(null);
+    setFlaggedIssues([]); setRouteBounds(null); setRouteMode(false);
+    setRouteError(""); setSource(""); setDestination("");
   };
 
-  const severityInfo = () => {
-    const n = flaggedIssues.length;
-    if (n === 0) return { text: "✅ Clear Route — No issues found!", color: "bg-green-50 border-green-300 text-green-700" };
-    if (n <= 2) return { text: `⚠️ ${n} Minor Issue${n > 1 ? "s" : ""} along this route`, color: "bg-yellow-50 border-yellow-300 text-yellow-700" };
-    return { text: `🚨 ${n} Issues along this route — Drive carefully!`, color: "bg-red-50 border-red-300 text-red-700" };
-  };
+  const sev = routeMode ? getSeverity(flaggedIssues.length) : null;
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50">
-      {/* Header */}
-      <div className="mb-6 text-center">
-        <h1 className="text-3xl font-extrabold text-gray-900">
-          🗺️ Map View of Reported Issues
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Welcome <span className="text-indigo-600 font-semibold">{user}</span> — view
-          and search reported issues across your city.
-        </p>
-      </div>
+    <section className="py-16 px-4 bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-5xl mx-auto space-y-8">
 
-      {/* ── Route Finder Panel ──────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto mb-5 bg-white rounded-2xl shadow-md border border-gray-200 p-5">
-        <h2 className="text-base font-bold text-gray-700 mb-3 flex items-center gap-2">
-          <span className="text-xl">🛣️</span> Route Issue Finder
-          <span className="text-xs font-normal text-gray-400 ml-1">
-            — Enter source & destination to highlight issues along your path
+        {/* ── Section Heading ────────────────────────────────────────────────── */}
+        <div className="text-center">
+          <span className="inline-block bg-gradient-to-r from-blue-500 to-green-500 text-transparent bg-clip-text text-sm font-bold uppercase tracking-widest mb-2">
+            Live Map
           </span>
-        </h2>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
+            🗺️ City Issue Map
+          </h2>
+          <p className="text-gray-500 mt-2 text-sm">
+            Hi <span className="font-semibold text-blue-600">{user}</span> — browse reported civic issues or check your route before you travel.
+          </p>
+          {/* Blue-green gradient underline */}
+          <div className="mx-auto mt-3 h-1 w-20 rounded-full bg-gradient-to-r from-blue-500 to-green-500" />
+        </div>
 
-        <form onSubmit={handleRouteSearch} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base">🚀</span>
-            <input
-              type="text"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              placeholder="Source (e.g. Connaught Place, Delhi)"
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
-            />
-          </div>
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base">🏁</span>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="Destination (e.g. India Gate, Delhi)"
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={routeLoading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 whitespace-nowrap shadow-sm"
-          >
-            {routeLoading ? "Searching…" : "Find Issues"}
-          </button>
-          {routeMode && (
-            <button
-              type="button"
-              onClick={clearRoute}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
-            >
-              ✕ Clear
-            </button>
-          )}
-        </form>
-
-        {routeError && (
-          <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 font-medium">
-            ⚠️ {routeError}
-          </div>
-        )}
-
-        {routeMode && !routeLoading && (
-          <>
-            {/* Severity banner */}
-            <div className={`mt-3 text-sm font-bold border rounded-xl px-4 py-2 ${severityInfo().color}`}>
-              {severityInfo().text}
-              <span className="font-normal ml-2 text-xs opacity-70">(within 500m of route)</span>
+        {/* ── Route Finder Card ──────────────────────────────────────────────── */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-6">
+          {/* Card Header */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-lg shadow-md">
+              🛣️
             </div>
-
-            {/* Issue list box — shown only when there are flagged issues */}
-            {flaggedIssues.length > 0 && (
-              <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                    🚨 Issues on this route
-                  </span>
-                  <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-                    {flaggedIssues.length} found
-                  </span>
-                </div>
-                <div className="max-h-52 overflow-y-auto divide-y divide-gray-100">
-                  {flaggedIssues.map((issue) => (
-                    <div key={issue._id} className="flex items-start gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
-                      {/* Status dot */}
-                      <span
-                        className="mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ background: STATUS_COLORS[issue.status] || "#ef4444" }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{issue.title}</p>
-                        <p className="text-xs text-gray-400 truncate">{issue.description}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span
-                          className="text-xs font-bold px-2 py-0.5 rounded-full"
-                          style={{
-                            background: (STATUS_COLORS[issue.status] || "#ef4444") + "20",
-                            color: STATUS_COLORS[issue.status] || "#ef4444",
-                          }}
-                        >
-                          {issue.status}
-                        </span>
-                        <span className="text-xs text-gray-400">{issue.category}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* ── Map ────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl shadow-lg overflow-hidden border border-gray-200 bg-white max-w-5xl mx-auto">
-        {loading ? (
-          <div className="flex items-center justify-center h-[520px]">
-            <div className="animate-spin rounded-full h-14 w-14 border-4 border-indigo-500 border-t-transparent" />
+            <div>
+              <h3 className="text-gray-900 font-bold text-base">Route Issue Finder</h3>
+              <p className="text-gray-400 text-xs">Highlights issues within 500m of your route</p>
+            </div>
           </div>
-        ) : (
-          <MapContainer
-            center={[28.6448, 77.216721]}
-            zoom={12}
-            style={{ height: "520px", width: "100%" }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
 
-            {routeBounds && <FlyTo bounds={routeBounds} />}
-
-            {/* Route polyline */}
-            {routeCoords && (
-              <Polyline
-                positions={routeCoords}
-                pathOptions={{ color: "#6366f1", weight: 5, opacity: 0.9 }}
+          {/* Search inputs */}
+          <form onSubmit={handleRouteSearch} className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base pointer-events-none">🚀</span>
+              <input
+                type="text"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder="Source (e.g. Chandni Chowk, Delhi)"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               />
+            </div>
+            <div className="relative flex-1">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base pointer-events-none">🏁</span>
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="Destination (e.g. India Gate, Delhi)"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={routeLoading}
+              className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 shadow-md shadow-blue-200 whitespace-nowrap"
+            >
+              {routeLoading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeDasharray="40" strokeDashoffset="10" />
+                  </svg>
+                  Searching…
+                </span>
+              ) : "Find Issues"}
+            </button>
+            {routeMode && (
+              <button
+                type="button"
+                onClick={clearRoute}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
+              >
+                ✕ Clear
+              </button>
             )}
+          </form>
 
-            {/* Start / End markers */}
-            {fromCoord && (
-              <Marker position={fromCoord} icon={startIcon}>
-                <Popup><strong>🚀 Source</strong><br />{source}</Popup>
-              </Marker>
-            )}
-            {toCoord && (
-              <Marker position={toCoord} icon={endIcon}>
-                <Popup><strong>🏁 Destination</strong><br />{destination}</Popup>
-              </Marker>
-            )}
+          {/* Error */}
+          {routeError && (
+            <div className="mt-3 flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-xl px-4 py-2.5">
+              ⚠️ {routeError}
+            </div>
+          )}
 
-            {/* ── Route mode: only flagged issues shown as red markers ── */}
-            {routeMode ? (
-              <>
-                {/* Only flagged issues — highlighted with warning icon */}
+          {/* Severity banner */}
+          {routeMode && !routeLoading && sev && (
+            <div className={`mt-3 flex items-center gap-3 border rounded-xl px-4 py-3 ${sev.cls}`}>
+              <span className="text-2xl">{sev.icon}</span>
+              <div className="flex-1">
+                <p className="font-bold text-sm">{sev.label}</p>
+                <p className="text-xs opacity-70">{sev.sub}</p>
+              </div>
+              {flaggedIssues.length > 0 && (
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${sev.badge}`}>
+                  {flaggedIssues.length} found
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Issues list */}
+          {routeMode && flaggedIssues.length > 0 && (
+            <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Issues on route</span>
+                <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                  {flaggedIssues.length} found
+                </span>
+              </div>
+              <div className="max-h-52 overflow-y-auto divide-y divide-gray-100">
                 {flaggedIssues.map((issue) => (
+                  <div key={issue._id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ background: STATUS_COLORS[issue.status] || "#ef4444" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{issue.title}</p>
+                      <p className="text-xs text-gray-400 truncate">{issue.description}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span
+                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: (STATUS_COLORS[issue.status] || "#ef4444") + "20",
+                          color: STATUS_COLORS[issue.status] || "#ef4444",
+                        }}
+                      >
+                        {issue.status}
+                      </span>
+                      <span className="text-xs text-gray-400">{issue.category}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Map ──────────────────────────────────────────────────────────────── */}
+        <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-200" style={{ height: 520 }}>
+          {loading ? (
+            <div className="h-full bg-gray-100 flex flex-col items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+              <p className="text-gray-400 text-sm font-medium">Loading map data…</p>
+            </div>
+          ) : (
+            <MapContainer center={[28.6448, 77.216721]} zoom={12} style={{ height: "100%", width: "100%" }}>
+              <TileLayer
+                attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              />
+              {routeBounds && <FlyTo bounds={routeBounds} />}
+
+              {/* Route polyline — blue-to-green gradient feel via dual segments */}
+              {routeCoords && (
+                <Polyline positions={routeCoords} pathOptions={{ color: "#3b82f6", weight: 5, opacity: 0.9 }} />
+              )}
+
+              {/* Start / End markers */}
+              {fromCoord && <Marker position={fromCoord} icon={startIcon}><Popup><strong>🚀 Source</strong><br />{source}</Popup></Marker>}
+              {toCoord   && <Marker position={toCoord}   icon={endIcon  }><Popup><strong>🏁 Destination</strong><br />{destination}</Popup></Marker>}
+
+              {/* Route mode — only flagged issues */}
+              {routeMode ? (
+                flaggedIssues.map((issue) => (
                   <Marker
                     key={issue._id}
-                    position={[
-                      Number(issue.location.latitude),
-                      Number(issue.location.longitude),
-                    ]}
+                    position={[Number(issue.location.latitude), Number(issue.location.longitude)]}
                     icon={problemIcon}
                   >
                     <Popup>
-                      <div className="space-y-1 min-w-[180px]">
-                        <h3 className="font-bold text-sm text-gray-900">⚠️ {issue.title}</h3>
-                        <p className="text-xs text-gray-500 line-clamp-3">{issue.description}</p>
-                        <div className="text-xs mt-1">
-                          <span className="font-semibold">Category:</span> {issue.category}
-                          <br />
-                          <span className="font-semibold">Status:</span>{" "}
-                          <span
-                            style={{ color: STATUS_COLORS[issue.status] || "#ef4444" }}
-                            className="font-bold"
-                          >
+                      <div style={{ minWidth: 180 }}>
+                        <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>⚠️ {issue.title}</p>
+                        <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>{issue.description}</p>
+                        <div style={{ fontSize: 11 }}>
+                          <b>Category:</b> {issue.category}<br />
+                          <b>Status:</b>{" "}
+                          <span style={{ color: STATUS_COLORS[issue.status] || "#ef4444", fontWeight: 700 }}>
                             {issue.status}
                           </span>
                         </div>
-                        {issue.imageURL && (
-                          <img
-                            src={
-                              issue.imageURL.startsWith("http")
-                                ? issue.imageURL
-                                : `https://cgc-hacathon-backend.onrender.com/${issue.imageURL.replace("\\", "/")}`
-                            }
-                            alt={issue.title}
-                            className="h-20 w-full object-cover rounded mt-1 border border-gray-200"
-                          />
-                        )}
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </>
-            ) : (
-              /* ── Normal mode: all issues with colored dots ── */
-              issues
-                .filter((i) => i.location?.latitude && i.location?.longitude)
-                .map((issue) => (
-                  <Marker
-                    key={issue._id}
-                    position={[
-                      Number(issue.location.latitude),
-                      Number(issue.location.longitude),
-                    ]}
-                    icon={defaultIcon}
-                  >
-                    <Popup>
-                      <div className="space-y-1">
-                        <h3 className="font-semibold text-base text-gray-900">{issue.title}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-3">{issue.description}</p>
-                        <div className="text-xs mt-2">
-                          <span className="font-semibold">Category:</span>{" "}
-                          <span className="text-gray-800">{issue.category}</span>
-                          <br />
-                          <span className="font-semibold">Status:</span>{" "}
-                          <span
-                            className={`font-bold ${
-                              issue.status === "Resolved"
-                                ? "text-green-600"
-                                : issue.status === "In Progress"
-                                ? "text-yellow-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {issue.status}
-                          </span>
-                        </div>
-                        {issue.imageURL && (
-                          <img
-                            src={
-                              issue.imageURL.startsWith("http")
-                                ? issue.imageURL
-                                : `https://cgc-hacathon-backend.onrender.com/${issue.imageURL.replace("\\", "/")}`
-                            }
-                            alt={issue.title}
-                            className="h-24 w-full object-cover rounded-md mt-2 border border-gray-200"
-                          />
-                        )}
                       </div>
                     </Popup>
                   </Marker>
                 ))
-            )}
-          </MapContainer>
-        )}
-      </div>
+              ) : (
+                /* Normal mode — all issues */
+                issues
+                  .filter((i) => i.location?.latitude && i.location?.longitude)
+                  .map((issue) => (
+                    <Marker
+                      key={issue._id}
+                      position={[Number(issue.location.latitude), Number(issue.location.longitude)]}
+                      icon={defaultIcon}
+                    >
+                      <Popup>
+                        <div style={{ minWidth: 180 }}>
+                          <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{issue.title}</p>
+                          <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>{issue.description}</p>
+                          <div style={{ fontSize: 11 }}>
+                            <b>Category:</b> {issue.category}<br />
+                            <b>Status:</b>{" "}
+                            <span style={{ color: STATUS_COLORS[issue.status] || "#ef4444", fontWeight: 700 }}>
+                              {issue.status}
+                            </span>
+                          </div>
+                          {issue.imageURL && (
+                            <img
+                              src={issue.imageURL.startsWith("http") ? issue.imageURL : `https://cgc-hacathon-backend.onrender.com/${issue.imageURL.replace("\\", "/")}`}
+                              alt={issue.title}
+                              style={{ marginTop: 6, width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #e5e7eb" }}
+                            />
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))
+              )}
+            </MapContainer>
+          )}
+        </div>
 
-      {/* ── Flagged issue cards ── */}
-      {routeMode && flaggedIssues.length > 0 && (
-        <div className="max-w-5xl mx-auto mt-6">
-          <h2 className="text-lg font-extrabold text-gray-800 mb-3">
-            ⚠️ Issues Along Your Route ({flaggedIssues.length})
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {flaggedIssues.map((issue) => (
-              <div
-                key={issue._id}
-                className="bg-white rounded-xl shadow border border-red-100 p-4 hover:shadow-md transition-all"
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-gray-800 text-sm leading-tight">{issue.title}</h3>
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                    style={{
-                      background: (STATUS_COLORS[issue.status] || "#ef4444") + "20",
-                      color: STATUS_COLORS[issue.status] || "#ef4444",
-                    }}
-                  >
-                    {issue.status}
-                  </span>
-                </div>
-                <p className="text-gray-500 text-xs line-clamp-2 mb-2">{issue.description}</p>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
-                  {issue.category}
-                </span>
+        {/* ── Stats bar ─────────────────────────────────────────────────────────── */}
+        {!routeMode && !loading && (
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Total Issues",  value: issues.length,                                      color: "text-sky-500",   bg: "bg-sky-50   border-sky-100"   },
+              { label: "Pending",       value: issues.filter(i => i.status === "Pending").length,  color: "text-red-500",   bg: "bg-red-50   border-red-100"   },
+              { label: "Resolved",      value: issues.filter(i => i.status === "Resolved").length, color: "text-green-500", bg: "bg-green-50 border-green-100" },
+            ].map(({ label, value, color, bg }) => (
+              <div key={label} className={`${bg} border rounded-2xl px-4 py-5 text-center shadow-sm`}>
+                <p className={`text-2xl font-extrabold ${color}`}>{value}</p>
+                <p className="text-xs text-gray-500 font-medium mt-1">{label}</p>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {routeMode && flaggedIssues.length === 0 && !routeLoading && (
-        <div className="max-w-5xl mx-auto mt-5 py-8 text-center bg-green-50 rounded-2xl border border-green-200">
-          <div className="text-4xl mb-2">✅</div>
-          <p className="font-bold text-green-700 text-lg">Great news! No issues on this route.</p>
-          <p className="text-green-500 text-sm mt-1">Safe travels! 🚗</p>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
-
-export default ReportMap;
