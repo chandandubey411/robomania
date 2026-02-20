@@ -197,32 +197,72 @@ const AdminDashboard = () => {
   }, [token]);
 
   const fetchData = async () => {
-    const res = await fetch("http://localhost:8080/api/issues", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setAllIssues(data);
-    setIssues(data);
-    setLoading(false);
+    try {
+      const res = await fetch("http://localhost:8080/api/issues", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch issues");
+
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAllIssues(data);
+        setIssues(data);
+      } else {
+        console.error("Issues data is not an array:", data);
+        setAllIssues([]);
+        setIssues([]);
+      }
+    } catch (err) {
+      console.error("Error fetching issues:", err);
+      setAllIssues([]);
+      setIssues([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchHeatmap = async () => {
-    const res = await fetch("http://localhost:8080/api/admin/issues/heatmap", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setHeatmapPoints(data);
+    try {
+      const res = await fetch("http://localhost:8080/api/admin/issues/heatmap", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch heatmap");
+
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setHeatmapPoints(data);
+      } else {
+        console.error("Heatmap data is not an array:", data);
+        setHeatmapPoints([]);
+      }
+    } catch (err) {
+      console.error("Error fetching heatmap:", err);
+      setHeatmapPoints([]);
+    }
   };
 
   const fetchAIPriorityIssues = async () => {
-    const res = await fetch(
-      "http://localhost:8080/api/admin/issues/ai-priority",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    const data = await res.json();
-    setAiIssues(data.slice(0, 6));
+    try {
+      const res = await fetch(
+        "http://localhost:8080/api/admin/issues/ai-priority",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch AI priority issues");
+
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAiIssues(data.slice(0, 6));
+      } else {
+        console.error("AI Priority data is not an array:", data);
+        setAiIssues([]);
+      }
+    } catch (err) {
+      console.error("Error fetching AI priority issues:", err);
+      setAiIssues([]);
+    }
   };
 
   useEffect(() => {

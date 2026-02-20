@@ -1,7 +1,16 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Issue = require("../Models/Issue");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+let genAI;
+try {
+  if (process.env.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  } else {
+    console.warn("⚠️ GEMINI_API_KEY is missing in environment variables.");
+  }
+} catch (error) {
+  console.error("Error initializing GoogleGenerativeAI:", error);
+}
 
 // ✅ Create Issue
 const createIssue = async (req, res) => {
@@ -34,16 +43,20 @@ const createIssue = async (req, res) => {
     // 🤖 AI Priority Assessment
     if (!priority && description) {
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `Analyze this civic issue: "${title} - ${description}".
-            Assign priority: High (Safety hazard, fire, severe), Medium (Garbage, pothole), Low (Minor).
-            Return ONLY one word: High, Medium, or Low.`;
+        if (!process.env.GEMINI_API_KEY) {
+          console.warn("⚠️ GEMINI_API_KEY missing, skipping AI priority");
+        } else {
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const prompt = `Analyze this civic issue: "${title} - ${description}".
+                Assign priority: High (Safety hazard, fire, severe), Medium (Garbage, pothole), Low (Minor).
+                Return ONLY one word: High, Medium, or Low.`;
 
-        const result = await model.generateContent(prompt);
-        const aiText = result.response.text().trim().replace(/\n/g, '').replace(/\./g, '');
+          const result = await model.generateContent(prompt);
+          const aiText = result.response.text().trim().replace(/\n/g, '').replace(/\./g, '');
 
-        if (["High", "Medium", "Low"].includes(aiText)) {
-          finalPriority = aiText;
+          if (["High", "Medium", "Low"].includes(aiText)) {
+            finalPriority = aiText;
+          }
         }
       } catch (aiErr) {
         console.error("AI Priority Failed:", aiErr);
@@ -160,17 +173,20 @@ const deleteIssue = async (req, res) => {
 // ✅ Get AI Priority Issues
 const getAIPriorityIssues = async (req, res) => {
   try {
+    console.log("⚡ FETCHING AI PRIORITY ISSUES...");
     const issues = await Issue.find({ priority: "High" }).sort({ createdAt: -1 }).limit(10);
+    console.log(`✅ FOUND ${issues.length} HIGH PRIORITY ISSUES`);
 
     // Fallback: If no High priority, show some recent ones to avoid empty state during testing
     if (issues.length === 0) {
+      console.log("⚠️ No High priority issues, fetching recent ones as fallback...");
       const recentIssues = await Issue.find().sort({ createdAt: -1 }).limit(5);
       return res.status(200).json(recentIssues);
     }
 
     res.status(200).json(issues);
   } catch (err) {
-    console.error("Get AI Priority Error:", err);
+    console.error("❌ Get AI Priority Error:", err);
     res.status(500).json({ error: "Fetch priority failed", details: err.message });
   }
 };

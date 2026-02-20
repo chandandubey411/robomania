@@ -2,6 +2,9 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.warn("⚠️ JWT_SECRET is missing in environment variables! Auth will fail.");
+}
 
 const auth = (req, res, next) => {
   const token = req.header("Authorization")?.split(" ")[1];
