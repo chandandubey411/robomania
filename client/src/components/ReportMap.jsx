@@ -10,6 +10,9 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import LocationSearchInput from "./LocationSearchInput"; // Import autocomplete component
+import { io } from "socket.io-client"; // 🔌 Import Socket.IO
+import { toast } from "react-toastify"; // Optional: Notification
 
 // ── Haversine distance (km) between two [lat,lng] points ─────────────────────
 function haversine([lat1, lon1], [lat2, lon2]) {
@@ -19,8 +22,8 @@ function haversine([lat1, lon1], [lat2, lon2]) {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -113,6 +116,11 @@ function ReportMap() {
   // Route state
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
+
+  // Store precise coordinates from autocomplete
+  const [sourceCoordsObj, setSourceCoordsObj] = useState(null);
+  const [destCoordsObj, setDestCoordsObj] = useState(null);
+
   const [routeCoords, setRouteCoords] = useState(null);
   const [fromCoord, setFromCoord] = useState(null);
   const [toCoord, setToCoord] = useState(null);
@@ -132,6 +140,24 @@ function ReportMap() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // 📡 Socket.IO Real-time Listener
+    const socket = io("http://localhost:8080");
+
+    socket.on("connect", () => {
+      console.log("🔌 ReportMap connected to WebSocket");
+    });
+
+    socket.on("new-iot-issue", (newIssue) => {
+      console.log("⚡ Realtime IoT Issue in Map:", newIssue);
+      setIssues((prev) => [newIssue, ...prev]);
+      // Optional: If we want to notify via toast here, we can, but Dashboard already does it.
+      // toast.info(`📡 New IoT Alert: ${newIssue.title}`);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const handleRouteSearch = async (e) => {
@@ -144,7 +170,15 @@ function ReportMap() {
     setRouteMode(false);
 
     try {
-      const [from, to] = await Promise.all([geocode(source), geocode(destination)]);
+      // Use selected coordinates if available, otherwise fallback to geocoding the text string
+      const from = sourceCoordsObj
+        ? [sourceCoordsObj.lat, sourceCoordsObj.lon]
+        : await geocode(source);
+
+      const to = destCoordsObj
+        ? [destCoordsObj.lat, destCoordsObj.lon]
+        : await geocode(destination);
+
       const coords = await getRoute(from, to);
 
       setFromCoord(from);
@@ -187,6 +221,9 @@ function ReportMap() {
     setRouteError("");
     setSource("");
     setDestination("");
+    setSourceCoordsObj(null);
+    setDestCoordsObj(null);
+    setRouteLoading(false);
   };
 
   const severityInfo = () => {
@@ -219,30 +256,36 @@ function ReportMap() {
         </h2>
 
         <form onSubmit={handleRouteSearch} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base">🚀</span>
-            <input
-              type="text"
+          <div className="relative flex-1 z-20">
+            <span className="absolute left-3 top-3.5 z-10 text-base">🚀</span>
+            <LocationSearchInput
+              placeholder="Source (e.g. Connaught Place)"
               value={source}
-              onChange={(e) => setSource(e.target.value)}
-              placeholder="Source (e.g. Connaught Place, Delhi)"
+              onChange={setSource}
+              onSelect={(data) => {
+                setSource(data.name);
+                setSourceCoordsObj(data);
+              }}
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
             />
           </div>
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base">🏁</span>
-            <input
-              type="text"
+          <div className="relative flex-1 z-10">
+            <span className="absolute left-3 top-3.5 z-10 text-base">🏁</span>
+            <LocationSearchInput
+              placeholder="Destination (e.g. India Gate)"
               value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="Destination (e.g. India Gate, Delhi)"
+              onChange={setDestination}
+              onSelect={(data) => {
+                setDestination(data.name);
+                setDestCoordsObj(data);
+              }}
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
             />
           </div>
           <button
             type="submit"
             disabled={routeLoading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 whitespace-nowrap shadow-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 whitespace-nowrap shadow-sm h-fit"
           >
             {routeLoading ? "Searching…" : "Find Issues"}
           </button>
@@ -250,7 +293,7 @@ function ReportMap() {
             <button
               type="button"
               onClick={clearRoute}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all h-fit"
             >
               ✕ Clear
             </button>
@@ -316,7 +359,7 @@ function ReportMap() {
       </div>
 
       {/* ── Map ────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl shadow-lg overflow-hidden border border-gray-200 bg-white max-w-5xl mx-auto">
+      <div className="rounded-2xl shadow-lg overflow-hidden border border-gray-200 bg-white max-w-5xl mx-auto relative z-0">
         {loading ? (
           <div className="flex items-center justify-center h-[520px]">
             <div className="animate-spin rounded-full h-14 w-14 border-4 border-indigo-500 border-t-transparent" />
@@ -369,7 +412,15 @@ function ReportMap() {
                   >
                     <Popup>
                       <div className="space-y-1 min-w-[180px]">
-                        <h3 className="font-bold text-sm text-gray-900">⚠️ {issue.title}</h3>
+                        <h3 className="font-bold text-sm text-gray-900">
+                          {issue.source === "IoT Auto Detection" && "📡 "}
+                          {issue.title}
+                        </h3>
+                        {issue.source === "IoT Auto Detection" && (
+                          <span className="inline-block bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold mb-1">
+                            IoT Detected {issue.confidenceScore && `(${issue.confidenceScore}%)`}
+                          </span>
+                        )}
                         <p className="text-xs text-gray-500 line-clamp-3">{issue.description}</p>
                         <div className="text-xs mt-1">
                           <span className="font-semibold">Category:</span> {issue.category}
@@ -409,11 +460,19 @@ function ReportMap() {
                       Number(issue.location.latitude),
                       Number(issue.location.longitude),
                     ]}
-                    icon={defaultIcon}
+                    icon={issue.source === "IoT Auto Detection" ? defaultIcon : defaultIcon} // Could use a specific IoT icon if desired
                   >
                     <Popup>
                       <div className="space-y-1">
-                        <h3 className="font-semibold text-base text-gray-900">{issue.title}</h3>
+                        <h3 className="font-semibold text-base text-gray-900">
+                          {issue.source === "IoT Auto Detection" && "📡 "}
+                          {issue.title}
+                        </h3>
+                        {issue.source === "IoT Auto Detection" && (
+                          <span className="inline-block bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold mb-1">
+                            IoT Confidence: {issue.confidenceScore}%
+                          </span>
+                        )}
                         <p className="text-sm text-gray-600 line-clamp-3">{issue.description}</p>
                         <div className="text-xs mt-2">
                           <span className="font-semibold">Category:</span>{" "}
@@ -421,13 +480,12 @@ function ReportMap() {
                           <br />
                           <span className="font-semibold">Status:</span>{" "}
                           <span
-                            className={`font-bold ${
-                              issue.status === "Resolved"
-                                ? "text-green-600"
-                                : issue.status === "In Progress"
+                            className={`font-bold ${issue.status === "Resolved"
+                              ? "text-green-600"
+                              : issue.status === "In Progress"
                                 ? "text-yellow-600"
                                 : "text-red-600"
-                            }`}
+                              }`}
                           >
                             {issue.status}
                           </span>
@@ -462,10 +520,21 @@ function ReportMap() {
             {flaggedIssues.map((issue) => (
               <div
                 key={issue._id}
-                className="bg-white rounded-xl shadow border border-red-100 p-4 hover:shadow-md transition-all"
+                onClick={() => handleIssueClick(issue)}
+                className={`bg-white rounded-xl shadow border p-4 hover:shadow-md transition-all cursor-pointer hover:ring-2 hover:ring-indigo-100 ${issue.source === "IoT Auto Detection" ? "border-blue-200 bg-blue-50/30" : "border-red-100"
+                  }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-gray-800 text-sm leading-tight">{issue.title}</h3>
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-sm leading-tight flex flex-col">
+                      {issue.title}
+                      {issue.source === "IoT Auto Detection" && (
+                        <span className="text-[10px] text-blue-600 font-normal">
+                          📡 IoT {issue.confidenceScore}%
+                        </span>
+                      )}
+                    </h3>
+                  </div>
                   <span
                     className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
                     style={{

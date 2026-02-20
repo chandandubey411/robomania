@@ -64,6 +64,7 @@ app.use("/api/location", require("./App/Routes/location"));
 app.use("/api/ai", require("./App/Routes/aiRoutes"));
 app.use("/api/vision", require("./App/Routes/visionRoutes"));
 app.use("/api/community", require("./App/Routes/communityRoutes"));
+app.use("/api/iot", require("./App/Routes/IoT")); // 🤖 IoT Routes
 
 // 🧪 Health Check
 app.get("/ping", (req, res) => res.send("pong"));
