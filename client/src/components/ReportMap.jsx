@@ -9,6 +9,9 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import LocationSearchInput from "./LocationSearchInput"; // Import autocomplete component
+import { io } from "socket.io-client"; // 🔌 Import Socket.IO
+import { toast } from "react-toastify"; // Optional: Notification
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function haversine([lat1, lon1], [lat2, lon2]) {
@@ -18,8 +21,8 @@ function haversine([lat1, lon1], [lat2, lon2]) {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -89,6 +92,7 @@ function getSeverity(n) {
   return         { label: `${n} Issues Found`, sub: "Drive carefully!", icon: "🚨", cls: "bg-red-50 border-red-200 text-red-800", badge: "bg-red-100 text-red-700" };
 }
 
+<<<<<<< HEAD
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function ReportMap() {
   const [issues, setIssues]               = useState([]);
@@ -98,6 +102,19 @@ export default function ReportMap() {
   const [routeCoords, setRouteCoords]     = useState(null);
   const [fromCoord, setFromCoord]         = useState(null);
   const [toCoord, setToCoord]             = useState(null);
+=======
+  // Route state
+  const [source, setSource] = useState("");
+  const [destination, setDestination] = useState("");
+
+  // Store precise coordinates from autocomplete
+  const [sourceCoordsObj, setSourceCoordsObj] = useState(null);
+  const [destCoordsObj, setDestCoordsObj] = useState(null);
+
+  const [routeCoords, setRouteCoords] = useState(null);
+  const [fromCoord, setFromCoord] = useState(null);
+  const [toCoord, setToCoord] = useState(null);
+>>>>>>> c8bcb0d14097d50658debfb9fa3ddad784945b00
   const [flaggedIssues, setFlaggedIssues] = useState([]);
   const [routeLoading, setRouteLoading]   = useState(false);
   const [routeError, setRouteError]       = useState("");
@@ -111,6 +128,24 @@ export default function ReportMap() {
       .then((r) => r.json())
       .then((d) => { setIssues(d); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // 📡 Socket.IO Real-time Listener
+    const socket = io("http://localhost:8080");
+
+    socket.on("connect", () => {
+      console.log("🔌 ReportMap connected to WebSocket");
+    });
+
+    socket.on("new-iot-issue", (newIssue) => {
+      console.log("⚡ Realtime IoT Issue in Map:", newIssue);
+      setIssues((prev) => [newIssue, ...prev]);
+      // Optional: If we want to notify via toast here, we can, but Dashboard already does it.
+      // toast.info(`📡 New IoT Alert: ${newIssue.title}`);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const handleRouteSearch = async (e) => {
@@ -119,7 +154,15 @@ export default function ReportMap() {
     setRouteError(""); setRouteLoading(true);
     setRouteCoords(null); setFlaggedIssues([]); setRouteMode(false);
     try {
-      const [from, to] = await Promise.all([geocode(source), geocode(destination)]);
+      // Use selected coordinates if available, otherwise fallback to geocoding the text string
+      const from = sourceCoordsObj
+        ? [sourceCoordsObj.lat, sourceCoordsObj.lon]
+        : await geocode(source);
+
+      const to = destCoordsObj
+        ? [destCoordsObj.lat, destCoordsObj.lon]
+        : await geocode(destination);
+
       const coords = await getRoute(from, to);
       setFromCoord(from); setToCoord(to); setRouteCoords(coords); setRouteMode(true);
 
@@ -140,9 +183,24 @@ export default function ReportMap() {
   };
 
   const clearRoute = () => {
+<<<<<<< HEAD
     setRouteCoords(null); setFromCoord(null); setToCoord(null);
     setFlaggedIssues([]); setRouteBounds(null); setRouteMode(false);
     setRouteError(""); setSource(""); setDestination("");
+=======
+    setRouteCoords(null);
+    setFromCoord(null);
+    setToCoord(null);
+    setFlaggedIssues([]);
+    setRouteBounds(null);
+    setRouteMode(false);
+    setRouteError("");
+    setSource("");
+    setDestination("");
+    setSourceCoordsObj(null);
+    setDestCoordsObj(null);
+    setRouteLoading(false);
+>>>>>>> c8bcb0d14097d50658debfb9fa3ddad784945b00
   };
 
   const sev = routeMode ? getSeverity(flaggedIssues.length) : null;
@@ -166,6 +224,7 @@ export default function ReportMap() {
           <div className="mx-auto mt-3 h-1 w-20 rounded-full bg-gradient-to-r from-blue-500 to-green-500" />
         </div>
 
+<<<<<<< HEAD
         {/* ── Route Finder Card ──────────────────────────────────────────────── */}
         <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-6">
           {/* Card Header */}
@@ -177,6 +236,116 @@ export default function ReportMap() {
               <h3 className="text-gray-900 font-bold text-base">Route Issue Finder</h3>
               <p className="text-gray-400 text-xs">Highlights issues within 500m of your route</p>
             </div>
+=======
+        <form onSubmit={handleRouteSearch} className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 z-20">
+            <span className="absolute left-3 top-3.5 z-10 text-base">🚀</span>
+            <LocationSearchInput
+              placeholder="Source (e.g. Connaught Place)"
+              value={source}
+              onChange={setSource}
+              onSelect={(data) => {
+                setSource(data.name);
+                setSourceCoordsObj(data);
+              }}
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+            />
+          </div>
+          <div className="relative flex-1 z-10">
+            <span className="absolute left-3 top-3.5 z-10 text-base">🏁</span>
+            <LocationSearchInput
+              placeholder="Destination (e.g. India Gate)"
+              value={destination}
+              onChange={setDestination}
+              onSelect={(data) => {
+                setDestination(data.name);
+                setDestCoordsObj(data);
+              }}
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={routeLoading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 whitespace-nowrap shadow-sm h-fit"
+          >
+            {routeLoading ? "Searching…" : "Find Issues"}
+          </button>
+          {routeMode && (
+            <button
+              type="button"
+              onClick={clearRoute}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all h-fit"
+            >
+              ✕ Clear
+            </button>
+          )}
+        </form>
+
+        {routeError && (
+          <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 font-medium">
+            ⚠️ {routeError}
+          </div>
+        )}
+
+        {routeMode && !routeLoading && (
+          <>
+            {/* Severity banner */}
+            <div className={`mt-3 text-sm font-bold border rounded-xl px-4 py-2 ${severityInfo().color}`}>
+              {severityInfo().text}
+              <span className="font-normal ml-2 text-xs opacity-70">(within 500m of route)</span>
+            </div>
+
+            {/* Issue list box — shown only when there are flagged issues */}
+            {flaggedIssues.length > 0 && (
+              <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                    🚨 Issues on this route
+                  </span>
+                  <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                    {flaggedIssues.length} found
+                  </span>
+                </div>
+                <div className="max-h-52 overflow-y-auto divide-y divide-gray-100">
+                  {flaggedIssues.map((issue) => (
+                    <div key={issue._id} className="flex items-start gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+                      {/* Status dot */}
+                      <span
+                        className="mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: STATUS_COLORS[issue.status] || "#ef4444" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{issue.title}</p>
+                        <p className="text-xs text-gray-400 truncate">{issue.description}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: (STATUS_COLORS[issue.status] || "#ef4444") + "20",
+                            color: STATUS_COLORS[issue.status] || "#ef4444",
+                          }}
+                        >
+                          {issue.status}
+                        </span>
+                        <span className="text-xs text-gray-400">{issue.category}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Map ────────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl shadow-lg overflow-hidden border border-gray-200 bg-white max-w-5xl mx-auto relative z-0">
+        {loading ? (
+          <div className="flex items-center justify-center h-[520px]">
+            <div className="animate-spin rounded-full h-14 w-14 border-4 border-indigo-500 border-t-transparent" />
+>>>>>>> c8bcb0d14097d50658debfb9fa3ddad784945b00
           </div>
 
           {/* Search inputs */}
@@ -321,6 +490,7 @@ export default function ReportMap() {
                     icon={problemIcon}
                   >
                     <Popup>
+<<<<<<< HEAD
                       <div style={{ minWidth: 180 }}>
                         <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>⚠️ {issue.title}</p>
                         <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>{issue.description}</p>
@@ -331,6 +501,98 @@ export default function ReportMap() {
                             {issue.status}
                           </span>
                         </div>
+=======
+                      <div className="space-y-1 min-w-[180px]">
+                        <h3 className="font-bold text-sm text-gray-900">
+                          {issue.source === "IoT Auto Detection" && "📡 "}
+                          {issue.title}
+                        </h3>
+                        {issue.source === "IoT Auto Detection" && (
+                          <span className="inline-block bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold mb-1">
+                            IoT Detected {issue.confidenceScore && `(${issue.confidenceScore}%)`}
+                          </span>
+                        )}
+                        <p className="text-xs text-gray-500 line-clamp-3">{issue.description}</p>
+                        <div className="text-xs mt-1">
+                          <span className="font-semibold">Category:</span> {issue.category}
+                          <br />
+                          <span className="font-semibold">Status:</span>{" "}
+                          <span
+                            style={{ color: STATUS_COLORS[issue.status] || "#ef4444" }}
+                            className="font-bold"
+                          >
+                            {issue.status}
+                          </span>
+                        </div>
+                        {issue.imageURL && (
+                          <img
+                            src={
+                              issue.imageURL.startsWith("http")
+                                ? issue.imageURL
+                                : `https://cgc-hacathon-backend.onrender.com/${issue.imageURL.replace("\\", "/")}`
+                            }
+                            alt={issue.title}
+                            className="h-20 w-full object-cover rounded mt-1 border border-gray-200"
+                          />
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </>
+            ) : (
+              /* ── Normal mode: all issues with colored dots ── */
+              issues
+                .filter((i) => i.location?.latitude && i.location?.longitude)
+                .map((issue) => (
+                  <Marker
+                    key={issue._id}
+                    position={[
+                      Number(issue.location.latitude),
+                      Number(issue.location.longitude),
+                    ]}
+                    icon={issue.source === "IoT Auto Detection" ? defaultIcon : defaultIcon} // Could use a specific IoT icon if desired
+                  >
+                    <Popup>
+                      <div className="space-y-1">
+                        <h3 className="font-semibold text-base text-gray-900">
+                          {issue.source === "IoT Auto Detection" && "📡 "}
+                          {issue.title}
+                        </h3>
+                        {issue.source === "IoT Auto Detection" && (
+                          <span className="inline-block bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold mb-1">
+                            IoT Confidence: {issue.confidenceScore}%
+                          </span>
+                        )}
+                        <p className="text-sm text-gray-600 line-clamp-3">{issue.description}</p>
+                        <div className="text-xs mt-2">
+                          <span className="font-semibold">Category:</span>{" "}
+                          <span className="text-gray-800">{issue.category}</span>
+                          <br />
+                          <span className="font-semibold">Status:</span>{" "}
+                          <span
+                            className={`font-bold ${issue.status === "Resolved"
+                              ? "text-green-600"
+                              : issue.status === "In Progress"
+                                ? "text-yellow-600"
+                                : "text-red-600"
+                              }`}
+                          >
+                            {issue.status}
+                          </span>
+                        </div>
+                        {issue.imageURL && (
+                          <img
+                            src={
+                              issue.imageURL.startsWith("http")
+                                ? issue.imageURL
+                                : `https://cgc-hacathon-backend.onrender.com/${issue.imageURL.replace("\\", "/")}`
+                            }
+                            alt={issue.title}
+                            className="h-24 w-full object-cover rounded-md mt-2 border border-gray-200"
+                          />
+                        )}
+>>>>>>> c8bcb0d14097d50658debfb9fa3ddad784945b00
                       </div>
                     </Popup>
                   </Marker>
@@ -372,6 +634,7 @@ export default function ReportMap() {
           )}
         </div>
 
+<<<<<<< HEAD
         {/* ── Stats bar ─────────────────────────────────────────────────────────── */}
         {!routeMode && !loading && (
           <div className="grid grid-cols-3 gap-4">
@@ -383,6 +646,47 @@ export default function ReportMap() {
               <div key={label} className={`${bg} border rounded-2xl px-4 py-5 text-center shadow-sm`}>
                 <p className={`text-2xl font-extrabold ${color}`}>{value}</p>
                 <p className="text-xs text-gray-500 font-medium mt-1">{label}</p>
+=======
+      {/* ── Flagged issue cards ── */}
+      {routeMode && flaggedIssues.length > 0 && (
+        <div className="max-w-5xl mx-auto mt-6">
+          <h2 className="text-lg font-extrabold text-gray-800 mb-3">
+            ⚠️ Issues Along Your Route ({flaggedIssues.length})
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {flaggedIssues.map((issue) => (
+              <div
+                key={issue._id}
+                onClick={() => handleIssueClick(issue)}
+                className={`bg-white rounded-xl shadow border p-4 hover:shadow-md transition-all cursor-pointer hover:ring-2 hover:ring-indigo-100 ${issue.source === "IoT Auto Detection" ? "border-blue-200 bg-blue-50/30" : "border-red-100"
+                  }`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-sm leading-tight flex flex-col">
+                      {issue.title}
+                      {issue.source === "IoT Auto Detection" && (
+                        <span className="text-[10px] text-blue-600 font-normal">
+                          📡 IoT {issue.confidenceScore}%
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                    style={{
+                      background: (STATUS_COLORS[issue.status] || "#ef4444") + "20",
+                      color: STATUS_COLORS[issue.status] || "#ef4444",
+                    }}
+                  >
+                    {issue.status}
+                  </span>
+                </div>
+                <p className="text-gray-500 text-xs line-clamp-2 mb-2">{issue.description}</p>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                  {issue.category}
+                </span>
+>>>>>>> c8bcb0d14097d50658debfb9fa3ddad784945b00
               </div>
             ))}
           </div>

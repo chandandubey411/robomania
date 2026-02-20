@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye } from "lucide-react";
+import { io } from "socket.io-client";
+import { toast } from "react-toastify";
 
 import CityHeatmap from "../components/CityHeatmap";
 import CreateWorker from "../components/CreateWorker";
+import IoTControlPanel from "../components/IoTControlPanel";
 
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -16,6 +19,7 @@ const CATEGORIES = [
   "Pothole",
   "Streetlight",
   "Other",
+  "IoT Auto Detection", // Added for filter compatibility
 ];
 const SORT_OPTIONS = [
   { label: "Latest first", value: "latest" },
@@ -82,12 +86,13 @@ const CityIssueMap = ({ issues }) => {
               center={[issue.location.latitude, issue.location.longitude]}
               radius={8}
               pathOptions={{
-                color:
+                color: issue.source === "IoT Auto Detection" ? "#2563eb" : // Blue for IoT
                   issue.status === "Resolved"
                     ? "green"
                     : issue.status === "In Progress"
                       ? "orange"
                       : "red",
+                fillOpacity: 0.6
               }}
             >
               <Popup>
@@ -96,6 +101,9 @@ const CityIssueMap = ({ issues }) => {
                 {issue.category}
                 <br />
                 Status: {issue.status}
+                {issue.source === "IoT Auto Detection" && (
+                  <div className="text-blue-600 font-bold text-xs mt-1">📡 IoT Detected ({issue.confidenceScore}%)</div>
+                )}
               </Popup>
             </CircleMarker>
           ) : null,
@@ -134,6 +142,38 @@ const AdminDashboard = () => {
     fetchData();
     fetchAIPriorityIssues();
     fetchHeatmap();
+
+    // 🔗 Socket Connection for Realtime IoT Updates
+    const socket = io("http://localhost:8080");
+
+    socket.on("connect", () => {
+      console.log("🔌 Connected to WebSocket for IoT updates");
+    });
+
+    socket.on("new-iot-issue", (newIssue) => {
+      console.log("⚡ Realtime IoT Issue Received:", newIssue);
+
+      // Update state
+      setAllIssues((prev) => [newIssue, ...prev]);
+
+      // Also update filtered state if it matches current filters
+      // (Simplified: just triggering re-render of pure list, sorting effects handle the rest essentially)
+
+      toast.info(`📡 New IoT Alert: ${newIssue.title}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -457,6 +497,11 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* 🤖 IoT Control Panel */}
+      <div className="mb-8 sm:mb-12">
+        <IoTControlPanel />
+      </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 mb-8 sm:mb-12 bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl shadow">
