@@ -96,44 +96,63 @@ const Navbar = () => {
             </Link>
           ) : (
             <>
-              <Link
-                to="/"
-                onClick={() => setIsOpen(false)}
-                className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
-              >
-                Home
-              </Link>
-              <Link
-                to={islogged ? "/report" : "/login"}
-                onClick={() => setIsOpen(false)}
-                className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
-              >
-                Report Issue
-              </Link>
-              <Link
-                to="/explore"
-                onClick={() => setIsOpen(false)}
-                className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
-              >
-                Explore Issues
-              </Link>
-
-              <Link
-                to="/community"
-                onClick={() => setIsOpen(false)}
-                className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
-              >
-                Community
-              </Link>
-
-              {islogged ? (
+              {role !== "worker" && (
                 <Link
-                  to="/user/dashboard"
+                  to="/"
                   onClick={() => setIsOpen(false)}
                   className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
                 >
-                  User Dashboard
+                  Home
                 </Link>
+              )}
+
+              {role === "worker" && (
+                <Link
+                  to="/worker/dashboard"
+                  onClick={() => setIsOpen(false)}
+                  className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+                >
+                  Authority Dashboard
+                </Link>
+              )}
+
+              {role !== "worker" && (
+                <>
+                  <Link
+                    to={islogged ? "/report" : "/login"}
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+                  >
+                    Report Issue
+                  </Link>
+                  <Link
+                    to="/explore"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+                  >
+                    Explore Issues
+                  </Link>
+
+                  <Link
+                    to="/community"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+                  >
+                    Community
+                  </Link>
+                </>
+              )}
+
+              {islogged ? (
+                role !== "worker" && (
+                  <Link
+                    to="/user/dashboard"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 font-semibold text-black hover:text-blue-700"
+                  >
+                    User Dashboard
+                  </Link>
+                )
               ) : (
                 <>
                   <Link
