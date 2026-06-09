@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { backendUrl } from "../App";
 
 const UserDashboard = () => {
   const [userIssues, setUserIssues] = useState([]);
@@ -13,7 +14,7 @@ const UserDashboard = () => {
   useEffect(() => {
     async function fetchUserIssues() {
       try {
-        const res = await fetch("http://localhost:8080/api/issues/my", {
+        const res = await fetch(`${backendUrl}/api/issues/my`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -107,7 +108,7 @@ const UserDashboard = () => {
                       src={
                         issue.imageURL.startsWith("http")
                           ? issue.imageURL
-                          : `http://localhost:8080/${issue.imageURL.replace(
+                          : `${backendUrl}/${issue.imageURL.replace(
                             /\\/g,
                             "/"
                           )}`

@@ -3,6 +3,7 @@ import { ToastContainer } from "react-toastify";
 import { handleError, handleSuccess } from "../Utils";
 import { Link, useNavigate } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
+import { backendUrl } from "../App";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -30,7 +31,7 @@ const Login = () => {
 
     if (Object.keys(errs).length === 0) {
       try {
-        const url = "http://localhost:8080/api/auth/login";
+        const url = `${backendUrl}/api/auth/login`;
         const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

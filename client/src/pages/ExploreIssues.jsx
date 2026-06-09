@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { backendUrl } from "../App";
 import {
     Heart,
     MessageCircle,
@@ -38,7 +39,7 @@ const ExploreIssues = () => {
 
     const fetchIssues = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/issues");
+            const res = await fetch(`${backendUrl}/api/issues`);
             const data = await res.json();
             setIssues(data);
         } catch (err) {
@@ -95,7 +96,7 @@ const ExploreIssues = () => {
         // setIssues(updatedIssues); // Uncomment for optimistic, but need reliable ID
 
         try {
-            const res = await fetch(`http://localhost:8080/api/issues/${issueId}/like`, {
+            const res = await fetch(`${backendUrl}/api/issues/${issueId}/like`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -111,7 +112,7 @@ const ExploreIssues = () => {
         if (!commentText.trim()) return;
 
         try {
-            const res = await fetch(`http://localhost:8080/api/issues/${issueId}/comment`, {
+            const res = await fetch(`${backendUrl}/api/issues/${issueId}/comment`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -156,7 +157,7 @@ const ExploreIssues = () => {
 
         // 🚀 Call API to increment share count
         try {
-            await fetch(`http://localhost:8080/api/issues/${issue._id}/share`, { method: "PUT" });
+            await fetch(`${backendUrl}/api/issues/${issue._id}/share`, { method: "PUT" });
             // Optimistically update local state if needed, though strictly not visible immediately unless we add a share count badge
         } catch (err) {
             console.error("Share count update failed", err);

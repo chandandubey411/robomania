@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { backendUrl } from "../App";
 
 const IoTControlPanel = () => {
     const [isSimulating, setIsSimulating] = useState(false);
@@ -6,7 +7,7 @@ const IoTControlPanel = () => {
     const [lastTrigger, setLastTrigger] = useState(null);
 
     useEffect(() => {
-        fetch("http://localhost:8080/api/iot/status")
+        fetch(`${backendUrl}/api/iot/status`)
             .then((res) => res.json())
             .then((data) => setIsSimulating(data.isSimulating))
             .catch((err) => console.error("IoT Status Error:", err));
@@ -16,7 +17,7 @@ const IoTControlPanel = () => {
         setLoading(true);
         const endpoint = isSimulating ? "stop" : "start";
         try {
-            await fetch(`http://localhost:8080/api/iot/${endpoint}`, { method: "POST" });
+            await fetch(`${backendUrl}/api/iot/${endpoint}`, { method: "POST" });
             setIsSimulating(!isSimulating);
         } catch (err) {
             console.error("IoT Toggle Error:", err);
@@ -28,7 +29,7 @@ const IoTControlPanel = () => {
     const triggerManual = async () => {
         try {
             setLastTrigger("Triggering...");
-            await fetch("http://localhost:8080/api/iot/trigger", { method: "POST" });
+            await fetch(`${backendUrl}/api/iot/trigger`, { method: "POST" });
             setLastTrigger("Issue Generated! 🤖");
             setTimeout(() => setLastTrigger(null), 3000);
         } catch (err) {

@@ -9,6 +9,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { handleSuccess } from "../Utils";
 import { useNavigate } from "react-router-dom";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
+import { backendUrl } from "../App";
 
 
 
@@ -32,7 +33,7 @@ function MapCenterUpdater({ setForm }) {
       const lng = center.lng;
 
       const res = await fetch(
-        `http://localhost:8080/api/location/reverse?format=json&lat=${lat}&lon=${lng}`
+        `${backendUrl}/api/location/reverse?format=json&lat=${lat}&lon=${lng}`
       );
       const data = await res.json();
 
@@ -69,7 +70,7 @@ function LocationPicker({ setForm }) {
       const { lat, lng } = e.latlng;
 
       const res = await fetch(
-        `http://localhost:8080/api/location/reverse?format=json&lat=${lat}&lon=${lng}`
+        `${backendUrl}/api/location/reverse?format=json&lat=${lat}&lon=${lng}`
       );
       const data = await res.json();
 
@@ -137,7 +138,7 @@ export default function ReportIssue() {
       const lng = pos.coords.longitude;
 
       const res = await fetch(
-        `http://localhost:8080/api/location/reverse?format=json&lat=${lat}&lon=${lng}`
+        `${backendUrl}/api/location/reverse?format=json&lat=${lat}&lon=${lng}`
       );
       const data = await res.json();
 
@@ -177,7 +178,7 @@ export default function ReportIssue() {
     try {
       setAiLoading(true);
       const res = await fetch(
-        "http://localhost:8080/api/ai/analyze",
+        `${backendUrl}/api/ai/analyze`,
         {
           method: "POST",
           headers: {
@@ -255,7 +256,7 @@ export default function ReportIssue() {
 
     try {
       const res = await fetch(
-        "http://localhost:8080/api/vision/analyze",
+        `${backendUrl}/api/vision/analyze`,
         {
           method: "POST",
           headers: {
@@ -314,7 +315,7 @@ export default function ReportIssue() {
     // ── ONLINE: submit immediately ────────────────────────────────
     setSubmitting(true);
     try {
-      const res = await fetch("http://localhost:8080/api/issues", {
+      const res = await fetch(`${backendUrl}/api/issues`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

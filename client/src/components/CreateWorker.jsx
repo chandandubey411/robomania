@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import { handleError, handleSuccess } from "../Utils";
 import { useNavigate } from "react-router-dom";
+import { backendUrl } from "../App";
 
 const DEPARTMENTS = [
   "Public Works Department (PWD)",
@@ -71,7 +72,7 @@ const CreateWorker = () => {
 
     try {
       const res = await fetch(
-        "http://localhost:8080/api/auth/signup",
+        `${backendUrl}/api/auth/register`,
         {
           method: "POST",
           headers: {

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
+import { backendUrl } from "../App";
 
 import CityHeatmap from "../components/CityHeatmap";
 import CreateWorker from "../components/CreateWorker";
@@ -144,7 +145,7 @@ const AdminDashboard = () => {
     fetchHeatmap();
 
     // 🔗 Socket Connection for Realtime IoT Updates
-    const socket = io("http://localhost:8080");
+    const socket = io(backendUrl);
 
     socket.on("connect", () => {
       console.log("🔌 Connected to WebSocket for IoT updates");
@@ -181,7 +182,7 @@ const AdminDashboard = () => {
 
     const fetchAITrends = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/ai/trends", {
+        const res = await fetch(`${backendUrl}/api/ai/trends`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -198,7 +199,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/issues", {
+      const res = await fetch(`${backendUrl}/api/issues`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch issues");
@@ -223,7 +224,7 @@ const AdminDashboard = () => {
 
   const fetchHeatmap = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/admin/issues/heatmap", {
+      const res = await fetch(`${backendUrl}/api/admin/issues/heatmap`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch heatmap");
@@ -244,7 +245,7 @@ const AdminDashboard = () => {
   const fetchAIPriorityIssues = async () => {
     try {
       const res = await fetch(
-        "http://localhost:8080/api/admin/issues/ai-priority",
+        `${backendUrl}/api/admin/issues/ai-priority`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -307,7 +308,7 @@ const AdminDashboard = () => {
   };
 
   const saveChanges = async (id) => {
-    const res = await fetch(`http://localhost:8080/api/admin/issues/${id}`, {
+    const res = await fetch(`${backendUrl}/api/admin/issues/${id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -325,7 +326,7 @@ const AdminDashboard = () => {
   const deleteIssue = async (id) => {
     if (!window.confirm("Delete this issue?")) return;
 
-    await fetch(`http://localhost:8080/api/admin/issues/${id}`, {
+    await fetch(`${backendUrl}/api/admin/issues/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

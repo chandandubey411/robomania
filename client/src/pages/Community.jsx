@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
-const BACKEND = "http://localhost:8080";
+import { backendUrl } from "../App";
 
 const CATEGORY_EMOJIS = {
   "Road & Traffic": "🚗",
@@ -47,7 +46,7 @@ export default function Community() {
   const fetchCommunities = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${BACKEND}/api/community`);
+      const res = await axios.get(`${backendUrl}/api/community`);
       setCommunities(res.data);
     } catch (err) {
       console.error(err);
@@ -76,7 +75,7 @@ export default function Community() {
     // Send join request
     try {
       setActionLoading(c._id);
-      await axios.post(`${BACKEND}/api/community/${c._id}/join`, {}, {
+      await axios.post(`${backendUrl}/api/community/${c._id}/join`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchCommunities();
@@ -92,7 +91,7 @@ export default function Community() {
     if (!token) return navigate("/login");
     setError(""); setCreating(true);
     try {
-      const res = await axios.post(`${BACKEND}/api/community`, form, {
+      const res = await axios.post(`${backendUrl}/api/community`, form, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setShowModal(false);

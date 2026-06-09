@@ -11,6 +11,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import LocationSearchInput from "./LocationSearchInput";
 import { io } from "socket.io-client";
+import { backendUrl } from "../App";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function haversine([lat1, lon1], [lat2, lon2]) {
@@ -117,13 +118,13 @@ export default function ReportMap() {
   const user = localStorage.getItem("loggedInUser") || "User";
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/issues")
+    fetch(`${backendUrl}/api/issues`)
       .then((r) => r.json())
       .then((d) => { setIssues(d); setLoading(false); })
       .catch(() => setLoading(false));
 
     // 📡 Socket.IO Real-time Listener
-    const socket = io("http://localhost:8080");
+    const socket = io(backendUrl);
 
     socket.on("connect", () => {
       console.log("🔌 ReportMap connected to WebSocket");

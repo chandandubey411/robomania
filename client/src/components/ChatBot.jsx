@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FiMessageCircle, FiX } from "react-icons/fi";
+import { backendUrl } from "../App";
 
 
 export default function ChatBot() {
@@ -16,7 +17,7 @@ export default function ChatBot() {
 
     const token = localStorage.getItem("token");
 
-    const res = await fetch("http://localhost:8080/api/chatbot/chat", {
+    const res = await fetch(`${backendUrl}/api/chatbot/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

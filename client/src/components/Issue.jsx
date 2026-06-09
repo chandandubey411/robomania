@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import SnailLoader from "../components/Loader";
+import { backendUrl } from "../App";
 
 function Issue() {
   const [issues, setIssues] = useState([]);
@@ -13,7 +14,7 @@ function Issue() {
   const user = localStorage.getItem("loggedInUser");
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/issues")
+    fetch(`${backendUrl}/api/issues`)
       .then((res) => res.json())
       .then((data) => {
         setIssues(data);

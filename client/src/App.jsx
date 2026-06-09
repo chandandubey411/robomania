@@ -23,6 +23,8 @@ import Footer from "./components/Footer";
 
 import ChatBot from "./components/ChatBot";
 
+export const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 function App() {
   const [isAuthenticated, setisAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);

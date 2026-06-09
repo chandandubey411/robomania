@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { io } from "socket.io-client";
-
-const BACKEND = "http://localhost:8080";
+import { backendUrl } from "../App";
 let socket;
 
 export default function CommunityChat() {
@@ -36,7 +35,7 @@ export default function CommunityChat() {
 
   // ─── Fetch ───────────────────────────────────────────────────────────────
   const fetchCommunity = async () => {
-    const res = await axios.get(`${BACKEND}/api/community/${id}`);
+    const res = await axios.get(`${backendUrl}/api/community/${id}`);
     setCommunity(res.data);
   };
 
@@ -46,8 +45,8 @@ export default function CommunityChat() {
       try {
         setLoading(true);
         const [commRes, msgRes] = await Promise.all([
-          axios.get(`${BACKEND}/api/community/${id}`),
-          axios.get(`${BACKEND}/api/community/${id}/messages`),
+          axios.get(`${backendUrl}/api/community/${id}`),
+          axios.get(`${backendUrl}/api/community/${id}/messages`),
         ]);
         setCommunity(commRes.data);
         setMessages(msgRes.data);
@@ -60,7 +59,7 @@ export default function CommunityChat() {
   // ─── Socket.IO ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-    socket = io(BACKEND, { transports: ["websocket", "polling"] });
+    socket = io(backendUrl, { transports: ["websocket", "polling"] });
     socket.emit("join-room", id);
 
     socket.on("receive-message", (msg) => {
@@ -110,7 +109,7 @@ export default function CommunityChat() {
     if (!window.confirm("Leave this community?")) return;
     setLeaving(true);
     try {
-      await axios.post(`${BACKEND}/api/community/${id}/leave`, {}, {
+      await axios.post(`${backendUrl}/api/community/${id}/leave`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       navigate("/community");
@@ -121,7 +120,7 @@ export default function CommunityChat() {
   const handleApprove = async (reqUserId) => {
     setActionLoading(reqUserId);
     try {
-      await axios.post(`${BACKEND}/api/community/${id}/approve/${reqUserId}`, {}, {
+      await axios.post(`${backendUrl}/api/community/${id}/approve/${reqUserId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchCommunity();
@@ -132,7 +131,7 @@ export default function CommunityChat() {
   const handleReject = async (reqUserId) => {
     setActionLoading(reqUserId + "_reject");
     try {
-      await axios.post(`${BACKEND}/api/community/${id}/reject/${reqUserId}`, {}, {
+      await axios.post(`${backendUrl}/api/community/${id}/reject/${reqUserId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchCommunity();
@@ -145,7 +144,7 @@ export default function CommunityChat() {
     if (!window.confirm(`Kick "${memberName}" from the community?`)) return;
     setActionLoading(memberUserId + "_kick");
     try {
-      await axios.post(`${BACKEND}/api/community/${id}/kick/${memberUserId}`, {}, {
+      await axios.post(`${backendUrl}/api/community/${id}/kick/${memberUserId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchCommunity();

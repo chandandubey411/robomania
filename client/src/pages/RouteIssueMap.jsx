@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { backendUrl } from "../App";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 // Haversine distance between two [lat,lng] points in km
@@ -109,7 +110,7 @@ export default function RouteIssueMap() {
 
   // Fetch all issues once
   useEffect(() => {
-    fetch("http://localhost:8080/api/issues")
+    fetch(`${backendUrl}/api/issues`)
       .then((r) => r.json())
       .then((data) => setIssues(data.filter((i) => i.location?.latitude && i.location?.longitude)))
       .catch(console.error);

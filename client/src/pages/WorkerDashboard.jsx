@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, Upload, X } from "lucide-react";
+import { backendUrl } from "../App";
 
 const STATUS_OPTIONS = ["Pending", "In Progress", "Resolved"];
 const PRIORITY_OPTIONS = ["High", "Medium", "Low"];
@@ -57,7 +58,7 @@ const WorkerDashboard = () => {
 
   const fetchIssues = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/worker/issues", {
+      const res = await fetch(`${backendUrl}/api/worker/issues`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token} `,
@@ -76,7 +77,7 @@ const WorkerDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/worker/stats", {
+      const res = await fetch(`${backendUrl}/api/worker/stats`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token} `,
@@ -91,7 +92,7 @@ const WorkerDashboard = () => {
 
   const fetchAITrends = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/ai/trends", {
+      const res = await fetch(`${backendUrl}/api/ai/trends`, {
         headers: { Authorization: `Bearer ${token} ` },
       });
       const data = await res.json();
@@ -130,7 +131,7 @@ const WorkerDashboard = () => {
       const fd = new FormData();
       fd.append("image", proofImage);
 
-      const uploadRes = await fetch("http://localhost:8080/api/vision/analyze", {
+      const uploadRes = await fetch(`${backendUrl}/api/vision/analyze`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token} ` },
         body: fd,
@@ -163,7 +164,7 @@ const WorkerDashboard = () => {
       const body = { status };
       if (proofImage) body.proofImage = proofImage;
 
-      const res = await fetch(`http://localhost:8080/api/worker/issues/${id}`, {
+      const res = await fetch(`${backendUrl}/api/worker/issues/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

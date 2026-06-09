@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const QUEUE_KEY = "offline_reports_queue";
-const BACKEND = "http://localhost:8080";
+const BACKEND = import.meta.env.VITE_BACKEND_URL;
 
 /** Read the current queue from localStorage */
 function readQueue() {
