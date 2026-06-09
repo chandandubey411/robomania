@@ -19,10 +19,11 @@ function Issue() {
       .then((data) => {
         setIssues(data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  // ✅ Auto play (pause when scrolling or expanded)
+  // Auto play
   useEffect(() => {
     if (issues.length === 0 || isScrolling || expanded) return;
 
@@ -42,9 +43,11 @@ function Issue() {
     }, 1000);
   };
 
-  if (loading) return <SnailLoader />;
-
+  // ✅ IMPORTANT FIX
   const currentIssue = issues[currentIndex];
+
+  if (loading) return <SnailLoader />;
+  if (!currentIssue) return <p className="text-center mt-10">No issues found</p>;
 
   return (
     <div className="p-10 min-h-screen">
@@ -57,23 +60,23 @@ function Issue() {
         </p>
       </div>
 
-      {/* 🌈 GRADIENT BORDER CARD */}
+      {/* CARD */}
       <div className="max-w-5xl mx-auto bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-[2px] rounded-3xl shadow-2xl">
         <div
           className={`bg-white rounded-3xl overflow-hidden flex transition-all duration-300 ${
             expanded ? "h-[500px]" : "h-72"
           }`}
         >
-          {/* LEFT IMAGE */}
-          {currentIssue.imageURL && (
+          {/* IMAGE */}
+          {currentIssue?.imageURL && (
             <img
               src={currentIssue.imageURL}
-              alt={currentIssue.title}
+              alt={currentIssue?.title}
               className="w-1/2 h-full object-cover p-4 rounded-3xl"
             />
           )}
 
-          {/* RIGHT TEXT */}
+          {/* TEXT */}
           <div
             onScroll={handleScroll}
             className="w-1/2 p-6 overflow-y-auto"
@@ -81,11 +84,11 @@ function Issue() {
           >
             <div className="h-full p-4">
               <span className="inline-block mb-3 px-4 py-1 text-xs font-semibold bg-gradient-to-r from-indigo-100 to-pink-100 text-indigo-700 rounded-full">
-                {currentIssue.category}
+                {currentIssue?.category}
               </span>
 
               <h2 className="text-2xl font-bold mb-3 text-gray-900">
-                {currentIssue.title}
+                {currentIssue?.title}
               </h2>
 
               <p
@@ -93,10 +96,10 @@ function Issue() {
                   expanded ? "" : "line-clamp-3"
                 }`}
               >
-                {currentIssue.description}
+                {currentIssue?.description}
               </p>
 
-              {currentIssue.description?.length > 120 && (
+              {currentIssue?.description?.length > 120 && (
                 <button
                   onClick={() => setExpanded(!expanded)}
                   className="text-indigo-600 font-semibold text-sm hover:underline"
@@ -110,19 +113,21 @@ function Issue() {
                   Status:{" "}
                   <span
                     className={`${
-                      currentIssue.status === "Resolved"
+                      currentIssue?.status === "Resolved"
                         ? "text-green-600"
-                        : currentIssue.status === "In Progress"
+                        : currentIssue?.status === "In Progress"
                         ? "text-yellow-600"
                         : "text-red-600"
                     }`}
                   >
-                    {currentIssue.status}
+                    {currentIssue?.status}
                   </span>
                 </span>
 
                 <span className="text-sm text-gray-400">
-                  {new Date(currentIssue.createdAt).toLocaleDateString()}
+                  {currentIssue?.createdAt
+                    ? new Date(currentIssue.createdAt).toLocaleDateString()
+                    : ""}
                 </span>
               </div>
             </div>
@@ -130,7 +135,7 @@ function Issue() {
         </div>
       </div>
 
-      {/* 🌈 THUMBNAILS WITH COLOR BORDER */}
+      {/* THUMBNAILS */}
       <div className="flex justify-center mt-10 gap-5 flex-wrap">
         {issues.map((issue, index) => (
           <button
@@ -144,10 +149,10 @@ function Issue() {
             }`}
           >
             <div className="w-16 h-16 rounded-full overflow-hidden bg-white">
-              {issue.imageURL ? (
+              {issue?.imageURL ? (
                 <img
                   src={issue.imageURL}
-                  alt={issue.title}
+                  alt={issue?.title}
                   className="w-full h-full object-cover"
                 />
               ) : (
